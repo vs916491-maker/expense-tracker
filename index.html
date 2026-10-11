@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #4f46e5;
+    --accent-dark: #4338ca;
+    --danger: #dc2626;
+    --border: #e5e7eb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .container { max-width: 560px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.4rem; margin: 8px 0 16px; }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .total { background: var(--accent); color: #fff; }
+  .total .label { font-size: .85rem; opacity: .85; }
+  .total .amount { font-size: 2rem; font-weight: 700; margin-top: 4px; }
+  form { display: grid; gap: 12px; }
+  label { display: grid; gap: 4px; font-size: .85rem; color: var(--muted); }
+  input, select, button { font: inherit; }
+  input, select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    background: #fff;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button.add {
+    padding: 12px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.add:hover { background: var(--accent-dark); }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  li:last-child { border-bottom: 0; }
+  .info { flex: 1; min-width: 0; }
+  .note { font-weight: 600; overflow-wrap: anywhere; }
+  .meta { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+  .tag {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: var(--accent);
+    font-size: .75rem;
+    margin-right: 6px;
+  }
+  .amt { font-weight: 700; white-space: nowrap; }
+  button.del {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--danger);
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  button.del:hover { background: #fef2f2; }
+  .empty { color: var(--muted); text-align: center; padding: 16px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>💰 Expense Tracker</h1>
+
+  <div class="card total">
+    <div class="label" id="monthLabel">Spent this month</div>
+    <div class="amount" id="monthTotal">₹0.00</div>
+  </div>
+
+  <div class="card">
+    <h2>Add expense</h2>
+    <form id="form">
+      <div class="row">
+        <label>Date
+          <input type="date" id="date" required>
+        </label>
+        <label>Amount (₹)
+          <input type="number" id="amount" min="0.01" step="0.01" inputmode="decimal" placeholder="0.00" required>
+        </label>
+      </div>
+      <label>Category
+        <select id="category">
+          <option>Food</option>
+          <option>Travel</option>
+          <option>Bills</option>
+          <option>Shopping</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>Note
+        <input type="text" id="note" maxlength="80" placeholder="e.g. Lunch with friends">
+      </label>
+      <button type="submit" class="add">Add expense</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Expenses</h2>
+    <ul id="list"></ul>
+  </div>
+</div>
+
+<script>
+  var STORAGE_KEY = "expense-tracker-data";
+  var expenses = load();
+
+  var form = document.getElementById("form");
+  var dateEl = document.getElementById("date");
+  var amountEl = document.getElementById("amount");
+  var categoryEl = document.getElementById("category");
+  var noteEl = document.getElementById("note");
+  var listEl = document.getElementById("list");
+
+  function load() {
+    try {
+      var data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(expenses));
+    } catch (e) {
+      alert("Could not save data in this browser.");
+    }
+  }
+
+  // Local date as YYYY-MM-DD (avoids UTC off-by-one issues)
+  function today() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+
+  function formatINR(n) {
+    return "₹" + n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatDate(s) {
+    var p = s.split("-");
+    return new Date(p[0], p[1] - 1, p[2]).toLocaleDateString("en-IN", {
+      day: "numeric", month: "short", year: "numeric"
+    });
+  }
+
+  function render() {
+    var now = today();
+    var monthPrefix = now.slice(0, 7);
+    var total = 0;
+    expenses.forEach(function (e) {
+      if (e.date.slice(0, 7) === monthPrefix) total += e.amount;
+    });
+    document.getElementById("monthTotal").textContent = formatINR(total);
+    document.getElementById("monthLabel").textContent = "Spent in " +
+      new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+    listEl.innerHTML = "";
+    if (!expenses.length) {
+      var empty = document.createElement("li");
+      empty.className = "empty";
+      empty.textContent = "No expenses yet. Add your first one above.";
+      listEl.appendChild(empty);
+      return;
+    }
+
+    expenses
+      .slice()
+      .sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; })
+      .forEach(function (e) {
+        var li = document.createElement("li");
+
+        var info = document.createElement("div");
+        info.className = "info";
+        var note = document.createElement("div");
+        note.className = "note";
+        note.textContent = e.note || e.category;
+        var meta = document.createElement("div");
+        meta.className = "meta";
+        var tag = document.createElement("span");
+        tag.className = "tag";
+        tag.textContent = e.category;
+        meta.appendChild(tag);
+        meta.appendChild(document.createTextNode(formatDate(e.date)));
+        info.appendChild(note);
+        info.appendChild(meta);
+
+        var amt = document.createElement("div");
+        amt.className = "amt";
+        amt.textContent = formatINR(e.amount);
+
+        var del = document.createElement("button");
+        del.className = "del";
+        del.type = "button";
+        del.textContent = "Delete";
+        del.setAttribute("aria-label", "Delete expense " + (e.note || e.category));
+        del.addEventListener("click", function () {
+          expenses = expenses.filter(function (x) { return x.id !== e.id; });
+          save();
+          render();
+        });
+
+        li.appendChild(info);
+        li.appendChild(amt);
+        li.appendChild(del);
+        listEl.appendChild(li);
+      });
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var amount = parseFloat(amountEl.value);
+    if (!dateEl.value || !(amount > 0)) return;
+    expenses.push({
+      id: Date.now(),
+      date: dateEl.value,
+      amount: amount,
+      category: categoryEl.value,
+      note: noteEl.value.trim()
+    });
+    save();
+    render();
+    amountEl.value = "";
+    noteEl.value = "";
+    amountEl.focus();
+  });
+
+  dateEl.value = today();
+  render();
+</script>
+</body>
+</html>
