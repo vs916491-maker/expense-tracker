@@ -6,6 +6,7 @@ A simple personal expense tracker that runs entirely in your browser. It is a si
 
 - **Add an expense** with a date, an amount in ₹, a category (Food, Travel, Bills, Shopping, Other) and a short note.
 - **See all expenses** in a list, newest first, each with a **Delete** button.
+- **Filter by category** using the dropdown above the list; it also shows how many expenses match and their subtotal.
 - **See the total spent this month** at the top of the page.
 - **Keeps your data** in your browser (`localStorage`), so it is still there after a refresh or restart.
 

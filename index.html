@@ -57,7 +57,10 @@
     cursor: pointer;
   }
   button.add:hover { background: var(--accent-dark); }
-  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  h2 { font-size: 1.05rem; margin: 0; }
+  .list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  .list-head select { width: auto; padding: 6px 10px; }
+  .summary { font-size: .8rem; color: var(--muted); margin-bottom: 8px; }
   ul { list-style: none; margin: 0; padding: 0; }
   li {
     display: flex;
@@ -129,7 +132,18 @@
   </div>
 
   <div class="card">
-    <h2>Expenses</h2>
+    <div class="list-head">
+      <h2>Expenses</h2>
+      <select id="filter" aria-label="Filter by category">
+        <option value="All">All categories</option>
+        <option>Food</option>
+        <option>Travel</option>
+        <option>Bills</option>
+        <option>Shopping</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="summary" id="summary"></div>
     <ul id="list"></ul>
   </div>
 </div>
@@ -144,6 +158,8 @@
   var categoryEl = document.getElementById("category");
   var noteEl = document.getElementById("note");
   var listEl = document.getElementById("list");
+  var filterEl = document.getElementById("filter");
+  var summaryEl = document.getElementById("summary");
 
   function load() {
     try {
@@ -192,16 +208,28 @@
     document.getElementById("monthLabel").textContent = "Spent in " +
       new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 
+    var filter = filterEl.value;
+    var visible = expenses.filter(function (e) {
+      return filter === "All" || e.category === filter;
+    });
+    var shown = 0;
+    visible.forEach(function (e) { shown += e.amount; });
+    summaryEl.textContent = expenses.length
+      ? "Showing " + visible.length + " of " + expenses.length + " · " + formatINR(shown)
+      : "";
+
     listEl.innerHTML = "";
-    if (!expenses.length) {
+    if (!visible.length) {
       var empty = document.createElement("li");
       empty.className = "empty";
-      empty.textContent = "No expenses yet. Add your first one above.";
+      empty.textContent = expenses.length
+        ? "No " + filter + " expenses."
+        : "No expenses yet. Add your first one above.";
       listEl.appendChild(empty);
       return;
     }
 
-    expenses
+    visible
       .slice()
       .sort(function (a, b) { return b.date.localeCompare(a.date) || b.id - a.id; })
       .forEach(function (e) {
@@ -261,6 +289,8 @@
     noteEl.value = "";
     amountEl.focus();
   });
+
+  filterEl.addEventListener("change", render);
 
   dateEl.value = today();
   render();
